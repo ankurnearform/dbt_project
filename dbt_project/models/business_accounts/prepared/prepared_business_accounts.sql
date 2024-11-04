@@ -13,7 +13,7 @@ with integrated_accounts as (
         contact_email,
         registration_date,
         total_transactions_amount
-    from {{ ref('integrated.integrated_accounts') }}
+    from {{ ref('integrated.integrated_accounts') }}}
 ),
 transaction_details as (
     select

@@ -1,4 +1,3 @@
-```
 {% macro calculate_total_transactions(column_name) %}
     sum({{ column_name }})
 {% endmacro %}
@@ -8,4 +7,3 @@
     CAST(current_timestamp() AS TIMESTAMP) as updated_at,
     CAST(current_timestamp() AS TIMESTAMP) as processed_at
 {% endmacro %}
-```

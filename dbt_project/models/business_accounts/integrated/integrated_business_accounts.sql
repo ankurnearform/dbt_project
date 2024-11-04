@@ -5,31 +5,35 @@
     )
 }}
 
-with business_accounts as (
-    select
+with deduplicated_accounts as (
+    select distinct
         account_id,
-        max(account_name) as account_name,
-        max(contact_email) as contact_email,
-        max(registration_date_formatted) as registration_date_formatted
+        account_name,
+        contact_email,
+        registration_date
     from {{ ref('staging.business_accounts') }}
-    group by account_id
 ),
 
-transactions_amount as (
+transaction_totals as (
     select
         account_id,
         sum(transaction_amount) as total_transactions_amount
     from {{ source('raw', 'raw_transactions') }}
     group by account_id
+),
+
+integrated_accounts as (
+    select
+        da.account_id,
+        da.account_name,
+        da.contact_email,
+        da.registration_date,
+        coalesce(tt.total_transactions_amount, 0) as total_transactions_amount
+    from deduplicated_accounts da
+    left join transaction_totals tt
+    on da.account_id = tt.account_id
 )
 
-select
-    ba.account_id,
-    ba.account_name,
-    ba.contact_email,
-    ba.registration_date_formatted,
-    coalesce(ta.total_transactions_amount, 0) as total_transactions_amount
-from business_accounts ba
-left join transactions_amount ta
-    on ba.account_id = ta.account_id
-order by ba.registration_date_formatted desc;
+select *
+from integrated_accounts
+order by registration_date desc;

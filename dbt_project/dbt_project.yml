@@ -1,0 +1,21 @@
+name: 'business_accounts'
+version: '1.0'
+config-version: 2
+
+profile: 'databricks_dbt'
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+
+models:
+  business_accounts:
+    staging:
+      materialized: view
+    integrated:
+      materialized: table
+    prepared:
+      materialized: table

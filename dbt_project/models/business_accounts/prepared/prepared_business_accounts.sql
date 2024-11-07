@@ -1,10 +1,9 @@
-```sql
-{{
+{{ 
     config(
         materialized='table',
         unique_key='account_id',
         load_type='incremental'
-    )
+    ) 
 }}
 
 with integrated_business_accounts as (
@@ -39,4 +38,3 @@ select
     {{ set_audit_columns() }}
 from integrated_business_accounts iba
 left join transaction_aggregates ta on iba.account_id = ta.account_id;
-```

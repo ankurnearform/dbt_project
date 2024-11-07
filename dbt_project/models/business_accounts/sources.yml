@@ -1,4 +1,3 @@
-```yaml
 version: 2
 
 sources:
@@ -9,5 +8,4 @@ sources:
       - name: raw_business_accounts
         description: "Source table containing raw business account data."
       - name: raw_transactions
-        description: "Source table containing raw transactions data."
-```
+        description: "Source table containing raw transaction data."

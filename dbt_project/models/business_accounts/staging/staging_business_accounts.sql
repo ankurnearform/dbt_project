@@ -1,9 +1,9 @@
-{{
+{
     config(
         materialized='view',
         unique_key='account_id'
     )
-}}
+}
 
 with staging_business_accounts as (
     select

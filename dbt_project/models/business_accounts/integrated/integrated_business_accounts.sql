@@ -1,10 +1,9 @@
-{{
-
+{
     config(
         materialized='view',
         unique_key='account_id'
     )
-}}
+}
 
 with business_accounts as (
     select

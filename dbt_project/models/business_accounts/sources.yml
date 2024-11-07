@@ -6,6 +6,6 @@ sources:
     schema: raw
     tables:
       - name: raw_business_accounts
-        description: "Source table containing business account data."
+        description: "Source table containing raw business account data."
       - name: raw_transactions
-        description: "Source table containing transaction data."
+        description: "Source table containing raw transaction data."

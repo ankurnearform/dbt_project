@@ -1,10 +1,10 @@
-{
+{{ 
     config(
         materialized='table',
         unique_key='account_id',
         load_type='incremental'
     )
-}
+}}
 
 with integrated_business_accounts as (
     select

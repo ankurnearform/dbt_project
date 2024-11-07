@@ -1,11 +1,11 @@
-{
+{{
     config(
         materialized='view',
         unique_key='account_id'
     )
-}
+}}
 
-with staging_business_accounts as (
+with business_accounts_staging as (
     select
         account_id,
         business_name as account_name,
@@ -16,4 +16,4 @@ with staging_business_accounts as (
 )
 
 select *
-from staging_business_accounts;
+from business_accounts_staging;

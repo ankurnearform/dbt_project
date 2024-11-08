@@ -1,30 +1,22 @@
-{{ 
+{{
     config(
         materialized='view',
         unique_key='account_id'
     )
 }}
 
-with business_accounts as (
+with deduplicated_accounts as (
     select
         account_id,
         account_name,
         contact_email,
-        formatted_registration_date
-    from {{ ref('staging_business_accounts') }}
-),
+        registration_date,
+        rank() over (partition by account_id order by registration_date desc) as rank
+    from {{ ref('staging.business_accounts') }}
+    where contact_email is not null
+)
 
-deduplicated_accounts as (
-    select
-        account_id,
-        account_name,
-        contact_email,
-        formatted_registration_date,
-        row_number() over (partition by account_id order by formatted_registration_date desc) as rn
-    from business_accounts
-),
-
-transactions_aggregated as (
+, transaction_totals as (
     select
         account_id,
         sum(transaction_amount) as total_transactions_amount
@@ -32,13 +24,18 @@ transactions_aggregated as (
     group by account_id
 )
 
-select
-    da.account_id,
-    da.account_name,
-    da.contact_email,
-    da.formatted_registration_date,
-    coalesce(ta.total_transactions_amount, 0) as total_transactions_amount
-from deduplicated_accounts da
-left join transactions_aggregated ta on da.account_id = ta.account_id
-where da.rn = 1
-order by da.formatted_registration_date desc;
+, integrated_accounts as (
+    select
+        da.account_id,
+        da.account_name,
+        da.contact_email,
+        da.registration_date,
+        tt.total_transactions_amount
+    from deduplicated_accounts da
+    left join transaction_totals tt on da.account_id = tt.account_id
+    where da.rank = 1
+)
+
+select *
+from integrated_accounts
+order by registration_date desc;

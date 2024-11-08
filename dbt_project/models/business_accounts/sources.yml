@@ -1,4 +1,3 @@
-```yaml
 version: 2
 
 sources:
@@ -10,4 +9,3 @@ sources:
         description: "Source table in Hive containing raw business account data."
       - name: raw_transactions
         description: "Source table in Hive containing raw transaction data."
-```

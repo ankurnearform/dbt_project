@@ -1,0 +1,9 @@
+version: 2
+
+sources:
+  - name: databricks_source
+    database: hive_metastore
+    schema: default
+    tables:
+      - name: raw_customers
+        description: "Source table in Databricks containing customer data."

@@ -5,7 +5,7 @@
     )
 }}
 
-with business_accounts as (
+with business_accounts_staging as (
     select
         account_id,
         business_name as account_name,
@@ -16,4 +16,4 @@ with business_accounts as (
 )
 
 select *
-from business_accounts;
+from business_accounts_staging;

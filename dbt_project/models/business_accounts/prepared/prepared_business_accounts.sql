@@ -6,54 +6,49 @@
     )
 }}
 
-with integrated_accounts as (
+with business_accounts as (
     select
         account_id,
         account_name,
         contact_email,
-        registration_date,
-        total_transactions_amount
-    from {{ ref('integrated.integrated_accounts') }}
+        registration_date
+    from {{ ref('integrated.business_accounts') }}
 ),
-transaction_details as (
+
+transactions_aggregated as (
     select
-        account_id,
+        rt.account_id,
         count(*) as total_number_of_transactions,
-        sum(transaction_amount) as total_transaction_volume,
-        min(transaction_date) as first_transaction_date,
-        max(transaction_date) as last_transaction_date
-    from {{ source('raw', 'raw_transactions') }}
-    group by account_id
+        {{ calculate_total_transactions('rt.transaction_amount') }} as total_transactions_volume,
+        min(rt.transaction_date) as first_transaction_date,
+        max(rt.transaction_date) as last_transaction_date
+    from {{ source('raw', 'raw_transactions') }} rt
+    group by rt.account_id
 ),
-account_metrics as (
+
+accounts_with_transactions as (
     select
-        ia.account_id,
-        ia.account_name,
-        ia.contact_email,
-        ia.registration_date,
-        ia.total_transactions_amount,
-        coalesce(td.total_number_of_transactions, 0) as total_number_of_transactions,
-        coalesce(td.total_transaction_volume, 0) as total_transaction_volume,
-        td.first_transaction_date,
-        td.last_transaction_date
-    from integrated_accounts ia
-    left join transaction_details td
-    on ia.account_id = td.account_id
-),
-prepared_accounts as (
-    select
-        account_id,
-        account_name,
-        contact_email,
-        registration_date,
-        total_transactions_amount,
-        total_number_of_transactions,
-        total_transaction_volume,
-        first_transaction_date,
-        last_transaction_date,
-        {{ calculate_total_transactions('total_transaction_volume') }},
-        {{ set_audit_columns() }}
-    from account_metrics
+        ba.account_id,
+        ba.account_name,
+        ba.contact_email,
+        ba.registration_date,
+        ta.total_number_of_transactions,
+        ta.total_transactions_volume,
+        ta.first_transaction_date,
+        ta.last_transaction_date
+    from business_accounts ba
+    join transactions_aggregated ta
+        on ba.account_id = ta.account_id
 )
-select *
-from prepared_accounts;
+
+select
+    account_id,
+    account_name,
+    contact_email,
+    registration_date,
+    total_number_of_transactions,
+    total_transactions_volume,
+    first_transaction_date,
+    last_transaction_date,
+    {{ set_audit_columns() }}
+from accounts_with_transactions;

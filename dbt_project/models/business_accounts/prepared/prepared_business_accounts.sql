@@ -6,54 +6,39 @@
     )
 }}
 
-with integrated_accounts as (
-    select
-        account_id,
-        account_name,
-        contact_email,
-        registration_date,
-        total_transactions_amount
-    from {{ ref('integrated.integrated_accounts') }}
-),
-transaction_details as (
+with account_metrics as (
     select
         account_id,
         count(*) as total_number_of_transactions,
-        sum(transaction_amount) as total_transaction_volume,
+        {{ calculate_total_transactions('transaction_amount') }} as total_transaction_volume,
         min(transaction_date) as first_transaction_date,
         max(transaction_date) as last_transaction_date
     from {{ source('raw', 'raw_transactions') }}
     group by account_id
 ),
-account_metrics as (
+
+prepared_business_accounts as (
     select
-        ia.account_id,
-        ia.account_name,
-        ia.contact_email,
-        ia.registration_date,
-        ia.total_transactions_amount,
-        coalesce(td.total_number_of_transactions, 0) as total_number_of_transactions,
-        coalesce(td.total_transaction_volume, 0) as total_transaction_volume,
-        td.first_transaction_date,
-        td.last_transaction_date
-    from integrated_accounts ia
-    left join transaction_details td
-    on ia.account_id = td.account_id
-),
-prepared_accounts as (
-    select
-        account_id,
-        account_name,
-        contact_email,
-        registration_date,
-        total_transactions_amount,
-        total_number_of_transactions,
-        total_transaction_volume,
-        first_transaction_date,
-        last_transaction_date,
-        {{ calculate_total_transactions('total_transaction_volume') }},
-        {{ set_audit_columns() }}
-    from account_metrics
+        iba.account_id,
+        iba.account_name,
+        iba.contact_email,
+        iba.registration_date,
+        am.total_number_of_transactions,
+        am.total_transaction_volume,
+        am.first_transaction_date,
+        am.last_transaction_date
+    from {{ ref('integrated_business_accounts') }} iba
+    left join account_metrics am on iba.account_id = am.account_id
 )
-select *
-from prepared_accounts;
+
+select
+    account_id,
+    account_name,
+    contact_email,
+    registration_date,
+    total_number_of_transactions,
+    total_transaction_volume,
+    first_transaction_date,
+    last_transaction_date,
+    {{ set_audit_columns() }}
+from prepared_business_accounts;

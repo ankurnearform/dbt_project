@@ -1,10 +1,10 @@
-{{
+{
     config(
         materialized='table',
         unique_key='account_id',
         load_type='incremental'
     )
-}}
+}
 
 with integrated_accounts as (
     select
@@ -13,7 +13,7 @@ with integrated_accounts as (
         contact_email,
         registration_date,
         total_transactions_amount
-    from {{ ref('integrated.integrated_accounts') }}
+    from {{ ref('integrated.business_accounts') }}
 ),
 transaction_details as (
     select
@@ -25,15 +25,15 @@ transaction_details as (
     from {{ source('raw', 'raw_transactions') }}
     group by account_id
 ),
-account_metrics as (
+accounts_with_transactions as (
     select
         ia.account_id,
         ia.account_name,
         ia.contact_email,
         ia.registration_date,
         ia.total_transactions_amount,
-        coalesce(td.total_number_of_transactions, 0) as total_number_of_transactions,
-        coalesce(td.total_transaction_volume, 0) as total_transaction_volume,
+        td.total_number_of_transactions,
+        td.total_transaction_volume,
         td.first_transaction_date,
         td.last_transaction_date
     from integrated_accounts ia
@@ -47,13 +47,22 @@ prepared_accounts as (
         contact_email,
         registration_date,
         total_transactions_amount,
-        total_number_of_transactions,
-        total_transaction_volume,
+        {{ calculate_total_transactions('total_number_of_transactions', 'total_transaction_volume') }} as transaction_metrics,
         first_transaction_date,
         last_transaction_date,
-        {{ calculate_total_transactions('total_transaction_volume') }},
-        {{ set_audit_columns() }}
-    from account_metrics
+        {{ set_audit_columns() }} as audit_columns
+    from accounts_with_transactions
 )
-select *
+
+select
+    account_id,
+    account_name,
+    contact_email,
+    registration_date,
+    transaction_metrics,
+    first_transaction_date,
+    last_transaction_date,
+    audit_columns.created_at,
+    audit_columns.updated_at,
+    audit_columns.processed_at
 from prepared_accounts;

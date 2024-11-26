@@ -9,7 +9,7 @@ macro-paths: ["macros"]
 
 target-path: "target"
 clean-targets:
-  - "target"
+    - "target"
 
 models:
   business_accounts:

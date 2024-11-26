@@ -5,51 +5,31 @@
     )
 }}
 
-with business_accounts as (
-    select
-        account_id,
-        business_name as account_name,
-        contact_email,
-        to_date(registration_date, 'YYYY-MM-DD') as registration_date
-    from {{ source('raw', 'raw_business_accounts') }}
-    where contact_email is not null
-),
-deduplicated_accounts as (
-    select
-        account_id,
-        account_name,
-        contact_email,
-        registration_date,
-        row_number() over (partition by account_id order by registration_date desc) as rn
-    from business_accounts
-),
-filtered_accounts as (
-    select
+with deduplicated_accounts as (
+    select distinct on (account_id)
         account_id,
         account_name,
         contact_email,
         registration_date
-    from deduplicated_accounts
-    where rn = 1
+    from {{ ref('staging_business_accounts') }}
+    order by account_id, registration_date desc
 ),
-transactions as (
+
+transaction_totals as (
     select
         account_id,
         sum(transaction_amount) as total_transactions_amount
     from {{ source('raw', 'raw_transactions') }}
     group by account_id
-),
-integrated_accounts as (
-    select
-        fa.account_id,
-        fa.account_name,
-        fa.contact_email,
-        fa.registration_date,
-        coalesce(t.total_transactions_amount, 0) as total_transactions_amount
-    from filtered_accounts fa
-    left join transactions t
-    on fa.account_id = t.account_id
 )
-select *
-from integrated_accounts
-order by registration_date desc;
+
+select
+    a.account_id,
+    a.account_name,
+    a.contact_email,
+    a.registration_date,
+    coalesce(t.total_transactions_amount, 0) as total_transactions_amount
+from deduplicated_accounts a
+left join transaction_totals t
+    on a.account_id = t.account_id
+order by a.registration_date desc;

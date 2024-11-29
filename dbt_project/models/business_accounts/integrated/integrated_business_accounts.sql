@@ -1,55 +1,50 @@
-{{
+{
     config(
         materialized='view',
         unique_key='account_id'
     )
-}}
+}
 
-with business_accounts as (
+with deduplicated_accounts as (
     select
         account_id,
-        business_name as account_name,
-        contact_email,
-        to_date(registration_date, 'YYYY-MM-DD') as registration_date
-    from {{ source('raw', 'raw_business_accounts') }}
-    where contact_email is not null
+        max(account_name) as account_name,
+        max(contact_email) as contact_email,
+        max(registration_date) as registration_date
+    from (
+        select
+            account_id,
+            account_name,
+            contact_email,
+            registration_date
+        from {{ ref('staging.business_accounts') }}
+    ) sub
+    group by account_id
 ),
-deduplicated_accounts as (
-    select
-        account_id,
-        account_name,
-        contact_email,
-        registration_date,
-        row_number() over (partition by account_id order by registration_date desc) as rn
-    from business_accounts
-),
-filtered_accounts as (
-    select
-        account_id,
-        account_name,
-        contact_email,
-        registration_date
-    from deduplicated_accounts
-    where rn = 1
-),
-transactions as (
+transaction_amounts as (
     select
         account_id,
         sum(transaction_amount) as total_transactions_amount
     from {{ source('raw', 'raw_transactions') }}
     group by account_id
 ),
-integrated_accounts as (
+enriched_accounts as (
     select
-        fa.account_id,
-        fa.account_name,
-        fa.contact_email,
-        fa.registration_date,
+        a.account_id,
+        a.account_name,
+        a.contact_email,
+        a.registration_date,
         coalesce(t.total_transactions_amount, 0) as total_transactions_amount
-    from filtered_accounts fa
-    left join transactions t
-    on fa.account_id = t.account_id
+    from deduplicated_accounts a
+    left join transaction_amounts t
+    on a.account_id = t.account_id
 )
-select *
-from integrated_accounts
+
+select
+    account_id,
+    account_name,
+    contact_email,
+    registration_date,
+    total_transactions_amount
+from enriched_accounts
 order by registration_date desc;
